@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="88 95 226 206" width="226" height="206"
+     role="img" aria-label="Lakebase Watch node mark">
+  <title>Lakebase Watch</title>
+
+  <g stroke-width="5" stroke-linecap="round" fill="none">
+    <path d="M200 200 121.9 145.3" stroke="#9c917c"/>
+    <path d="M200 200 122.5 245.6" stroke="#9c917c"/>
+    <path d="M200 200 289 119"     stroke="#2f7a70"/>
+    <path d="M200 200 291 199"     stroke="#2f7a70"/>
+    <path d="M200 200 290 277"     stroke="#c8562b"/>
+  </g>
+
+  <g fill="none" stroke="#9c917c" stroke-width="3.5">
+    <circle cx="110" cy="137" r="14.5"/>
+    <circle cx="110" cy="253" r="14.5"/>
+  </g>
+
+  <circle cx="289" cy="119" r="18" fill="#2f7a70"/>
+  <circle cx="291" cy="199" r="15" fill="#2f7a70"/>
+  <circle cx="290" cy="277" r="19" fill="#c8562b"/>
+  <circle cx="200" cy="200" r="27" fill="#f2efe9"/>
+</svg>

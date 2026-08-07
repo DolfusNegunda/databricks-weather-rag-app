@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400"
+     role="img" aria-label="Lakebase Watch node mark">
+  <title>Lakebase Watch</title>
+  <defs>
+    <pattern id="nx-grid" width="66.6667" height="66.6667" patternUnits="userSpaceOnUse">
+      <path d="M66.6667 0H0v66.6667" fill="none" stroke="#241f19" stroke-width="1.25"/>
+    </pattern>
+  </defs>
+
+  <rect width="400" height="400" fill="#1a1813"/>
+  <rect width="400" height="400" fill="url(#nx-grid)"/>
+
+  <!-- edges (drawn first so filled nodes sit on top) -->
+  <g stroke-width="5" stroke-linecap="round" fill="none">
+    <path d="M200 200 121.9 145.3" stroke="#9c917c"/>
+    <path d="M200 200 122.5 245.6" stroke="#9c917c"/>
+    <path d="M200 200 289 119"     stroke="#2f7a70"/>
+    <path d="M200 200 291 199"     stroke="#2f7a70"/>
+    <path d="M200 200 290 277"     stroke="#c8562b"/>
+  </g>
+
+  <!-- pending nodes -->
+  <g fill="none" stroke="#9c917c" stroke-width="3.5">
+    <circle cx="110" cy="137" r="14.5"/>
+    <circle cx="110" cy="253" r="14.5"/>
+  </g>
+
+  <!-- routed nodes -->
+  <circle cx="289" cy="119" r="18" fill="#2f7a70"/>
+  <circle cx="291" cy="199" r="15" fill="#2f7a70"/>
+  <circle cx="290" cy="277" r="19" fill="#c8562b"/>
+
+  <!-- hub -->
+  <circle cx="200" cy="200" r="27" fill="#f2efe9"/>
+</svg>

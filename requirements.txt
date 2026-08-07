@@ -1,0 +1,17 @@
+# CPU-only torch build. The default PyPI wheel bundles CUDA and runs ~800MB;
+# a Databricks App container has no GPU and a modest memory budget, so pulling
+# in that whole toolchain for one embedding model is what turns "pip install"
+# into "the deploy times out." This index serves torch without it, at ~200MB.
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+databricks-sdk>=0.30.0
+flask>=3.0.3
+psycopg2-binary>=2.9.9
+requests>=2.32.3
+sqlalchemy>=2.0.30
+python-dotenv>=1.0.1
+
+# Query-time embedding (see embedder.py) and the offline ingestion notebook.
+torch>=2.2.0
+sentence-transformers>=3.0.0
+numpy>=1.26.0
