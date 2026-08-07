@@ -1,0 +1,37 @@
+resources:
+  jobs:
+    weather-alert-resync:
+      name: weather-alert-resync
+      description: >
+        Re-syncs National Weather Service alerts (source_types=["alert"]
+        only) for the tracked locations by calling the deployed app's
+        POST /weather/sync. Alerts are the one source_type that can
+        meaningfully change minute to minute; forecasts and area forecast
+        discussions update far less often, so resyncing those every 15
+        minutes would just be wasted requests against api.weather.gov.
+
+      schedule:
+        quartz_cron_expression: "0 */15 * * * ?"
+        timezone_id: "America/Chicago"
+        pause_status: UNPAUSED
+
+      # No new_cluster / job_clusters block: a notebook_task with no compute
+      # attached runs on serverless jobs compute. For one HTTP POST every 15
+      # minutes that avoids spinning up a classic cluster on every run.
+
+      max_concurrent_runs: 1
+
+      # Job-level parameters are pushed down to notebook tasks automatically
+      # and surface as widgets of the same name (dbutils.widgets.get), so the
+      # task below doesn't repeat them in base_parameters.
+      parameters:
+        - name: WEATHER_APP_URL
+          default: ""
+        - name: WEATHER_LOCATIONS
+          default: "Chicago, IL|Austin, TX|Miami, FL"
+
+      tasks:
+        - task_key: resync_alerts
+          notebook_task:
+            # Resolved relative to this file's directory, not the bundle root.
+            notebook_path: ../notebooks/weather_sync_job.py

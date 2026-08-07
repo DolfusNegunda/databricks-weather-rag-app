@@ -1,0 +1,33 @@
+# Databricks Asset Bundle for the weather RAG pipeline's stretch goal: a
+# scheduled Job that re-syncs NWS alerts against the already-deployed app.
+#
+# This bundle does not deploy the app itself -- the app follows the repo's
+# Git-folder -> Apps -> resource pattern and is deployed separately. It only
+# defines the Job in resources/weather_sync_job.yml, which calls that app's
+# POST /weather/sync over HTTP on a schedule.
+
+bundle:
+  name: weather-rag
+
+include:
+  - resources/*.yml
+
+targets:
+  dev:
+    mode: development
+    default: true
+    workspace:
+      # Fill in with your own workspace URL before deploying, e.g.
+      # https://your-workspace.cloud.databricks.com -- never commit a real
+      # workspace host here.
+      host: https://REPLACE_WITH_YOUR_WORKSPACE_HOST.cloud.databricks.com
+
+  # `mode: development` forces every schedule/trigger to deploy PAUSED
+  # regardless of the pause_status set on the resource, so the job's
+  # UNPAUSED schedule only actually runs under a non-development target.
+  prod:
+    mode: production
+    workspace:
+      # Fill in with your own workspace URL before deploying -- never commit
+      # a real workspace host here.
+      host: https://REPLACE_WITH_YOUR_WORKSPACE_HOST.cloud.databricks.com

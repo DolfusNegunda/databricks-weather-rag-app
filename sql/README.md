@@ -8,9 +8,10 @@ app or `notebooks/ingest_weather_embeddings.py`.
 ### 1. Run `01_weather_documents.sql`
 
 Creates `weather_documents`, the raw document store harvested from the
-National Weather Service API. `app.py`'s `ensure_weather_tables()` also
-creates this table on first use, so running it by hand is optional but makes
-the schema visible up front.
+National Weather Service API. `lakebase.py`'s `ensure_weather_schema()` also
+applies this file (and `02_weather_embeddings.sql`) at app startup and from
+the ingestion notebook, so running it by hand is optional but makes the
+schema visible up front.
 
 ### 2. Run `02_weather_embeddings.sql`
 

@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Weather Intelligence</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/favicon.svg') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <a class="brand" href="/">
+        <img class="brand__mark" src="{{ url_for('static', filename='img/logo-mark.svg') }}" alt="" width="30" height="30">
+        <span class="brand__text">
+          <span class="brand__name">Weather Intelligence</span>
+          <span class="brand__sub">Semantic search over NWS alerts, forecasts and discussions.</span>
+        </span>
+      </a>
+    </header>
+
+    <main class="layout">
+      <div class="stack">
+        <section class="pane" id="sync-pane">
+          <div class="pane__head">
+            <span class="pane__title">Sync</span>
+          </div>
+          <div class="pane__scroll">
+            <form class="form" id="sync-form">
+              <div class="field">
+                <label class="field__label" for="sync-locations">Locations</label>
+                <input type="text" id="sync-locations" placeholder="Chicago, IL, Austin, TX">
+                <p class="field__hint">Comma or pipe-separated. Leave blank to sync a default set of locations.</p>
+              </div>
+              <div class="form__actions">
+                <button type="submit" class="btn btn--primary" id="sync-submit">
+                  <span class="btn__spinner" id="sync-spinner" hidden></span>
+                  <span id="sync-submit-label">Sync weather data</span>
+                </button>
+              </div>
+              <div id="sync-status" class="field__hint" hidden></div>
+            </form>
+          </div>
+        </section>
+
+        <section class="pane" id="search-pane">
+          <div class="pane__head">
+            <span class="pane__title">Search</span>
+          </div>
+          <div class="pane__scroll">
+            <form class="form" id="search-form">
+              <div class="field" id="query-field">
+                <label class="field__label" for="search-query">Query</label>
+                <input type="text" id="search-query" placeholder="Flash flood warnings near Austin">
+                <span class="field__error" id="query-error" hidden></span>
+              </div>
+
+              <div class="field-row">
+                <div class="field">
+                  <label class="field__label" for="search-topk">Results</label>
+                  <select id="search-topk">
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5" selected>5</option>
+                    <option value="6">6</option>
+                    <option value="7">7</option>
+                    <option value="8">8</option>
+                    <option value="9">9</option>
+                    <option value="10">10</option>
+                    <option value="12">12</option>
+                    <option value="15">15</option>
+                    <option value="20">20</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label class="field__label" for="search-source-type">Type</label>
+                  <select id="search-source-type">
+                    <option value="">All</option>
+                    <option value="alert">Alert</option>
+                    <option value="forecast">Forecast</option>
+                    <option value="discussion">Discussion</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="check-row">
+                <input type="checkbox" id="search-summarize">
+                <label for="search-summarize">Summarize with AI</label>
+              </div>
+
+              <div class="form__actions">
+                <button type="submit" class="btn btn--primary" id="search-submit" disabled>
+                  <span class="btn__spinner" id="search-spinner" hidden></span>
+                  <span id="search-submit-label">Search</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </section>
+      </div>
+
+      <section class="pane pane--detail" id="results-pane">
+        <div class="pane__head">
+          <span class="pane__title">Results</span>
+          <span class="pane__count" id="results-count"></span>
+        </div>
+        <div class="detail__scroll">
+          <div id="results-banner" hidden></div>
+
+          <div class="callout" id="summary-callout" hidden>
+            <strong>AI summary</strong>
+            <p id="summary-text"></p>
+            <span class="field__hint">Generated from the results shown below and may be wrong.</span>
+          </div>
+          <p class="field__hint" id="summary-error-note" hidden></p>
+
+          <div class="empty" id="empty-state">
+            <div class="empty__title" id="empty-title">Run a search</div>
+            <p class="empty__text" id="empty-text">Enter a query on the left and press Search to see matching alerts, forecasts and discussions.</p>
+          </div>
+
+          <div id="results-cards"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
