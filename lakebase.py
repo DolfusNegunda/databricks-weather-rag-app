@@ -33,6 +33,7 @@ import time
 import uuid
 from contextlib import contextmanager
 from datetime import datetime, timezone
+from pathlib import Path
 from urllib.parse import unquote, urlparse
 
 import psycopg2
@@ -41,6 +42,8 @@ from psycopg2.extras import RealDictCursor
 from sqlalchemy import create_engine
 
 log = logging.getLogger("weather.lakebase")
+
+_SQL_DIR = Path(__file__).resolve().parent / "sql"
 
 _SCOPE = os.environ.get("LAKEBASE_SECRET_SCOPE", "database")
 _KEY = os.environ.get("LAKEBASE_SECRET_KEY", "lakebase-url")
@@ -330,6 +333,44 @@ def run_write(sql: str, params: tuple | dict | None = None) -> int:
             cur.execute(sql, params)
             conn.commit()
             return cur.rowcount
+
+
+def _render_sql(filename: str, embedding_dim: int) -> str:
+    text = (_SQL_DIR / filename).read_text(encoding="utf-8")
+    return text.replace("{{EMBEDDING_DIM}}", str(int(embedding_dim)))
+
+
+def ensure_weather_schema(embedding_dim: int = 384) -> dict:
+    """Apply sql/01_weather_documents.sql and sql/02_weather_embeddings.sql.
+
+    Both files are exclusively IF NOT EXISTS / ON CONFLICT-guarded, so this is
+    safe to call on every app boot and every notebook run -- callers don't
+    need to know whether the schema already exists.
+
+    Called from both app.py's startup and the ingestion notebook, so the two
+    can never apply a different DDL to the same database by accident.
+
+    Each file is sent as a single multi-statement string over psycopg2's
+    simple query protocol, which -- unlike SQLAlchemy's exec_driver_sql --
+    accepts a semicolon-separated batch with no per-statement parameters, so
+    there is no empty-immutabledict trap to work around here.
+
+    Failures are captured, never raised: this runs during app startup, and an
+    exception escaping there kills the deployment before it can report why on
+    /healthz.
+    """
+    result = {"ok": False, "error": None}
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(_render_sql("01_weather_documents.sql", embedding_dim))
+                cur.execute(_render_sql("02_weather_embeddings.sql", embedding_dim))
+            conn.commit()
+        result["ok"] = True
+    except Exception as exc:  # noqa: BLE001 -- see docstring
+        log.exception("Weather schema bootstrap failed")
+        result["error"] = f"{type(exc).__name__}: {exc}"
+    return result
 
 
 def target_summary() -> dict:
