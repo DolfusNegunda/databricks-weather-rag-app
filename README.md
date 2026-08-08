@@ -17,7 +17,7 @@ writeup (data source justification, schema decisions, limitations).
 | Path | What it is |
 | --- | --- |
 | `app.py` | Flask entrypoint. Boots the schema, serves the UI, and exposes `/healthz`, `/weather/sync`, `/weather/search`. |
-| `lakebase.py` | The only module that opens a database connection — pooled `psycopg2` connections, a SQLAlchemy engine, `run_query`/`run_write`, and `ensure_weather_schema()`. |
+| `lakebase.py` | The only module that opens a database connection — pooled `psycopg2` connections, a SQLAlchemy engine, `run_query`/`run_write`, and `ensure_weather_schema()`. Every connection is pointed at `LAKEBASE_SCHEMA` (default `weather`, created automatically) via `SET search_path`, so this project's tables can share a Lakebase instance with another app with zero collision risk. |
 | `weather_client.py` | NWS API client: fetches alerts/forecasts/discussions and normalizes each into a `weather_documents` row. |
 | `embedder.py` | Chunking (800 chars / 100 overlap) and embedding (`sentence-transformers/all-MiniLM-L6-v2`, 384-dim), plus the pgvector literal formatter. |
 | `sql/` | `01_weather_documents.sql`, `02_weather_embeddings.sql` — idempotent DDL, applied automatically by `ensure_weather_schema()` and also runnable by hand. |
@@ -70,6 +70,17 @@ Once the app is running, `http://localhost:8000/healthz` should
 report `"status": "ok"` if `LAKEBASE_URL` is reachable, or `"degraded"` with
 a `bootstrap_error` explaining why if not — the app is designed to come up
 either way rather than crash at startup.
+
+### Sharing a Lakebase instance with another app
+
+This project's tables live in their own schema (`LAKEBASE_SCHEMA`, default
+`weather`), not `public` — created automatically on first boot via `SET
+search_path` on every connection (see `lakebase.py`). That means the *same*
+Lakebase instance, and the *same* `database`/`lakebase-url` secret if you
+already have one from another project, can be reused here with zero
+table-name collision risk. Point `setup_secrets.py` at the connection string
+you already have; storing an identical value is a no-op. Torn out later with
+`DROP SCHEMA weather CASCADE`, leaving anything else on that instance intact.
 
 ## Verification scripts
 

@@ -62,6 +62,22 @@ Two tables, one-to-many:
   all of its vectors in the same statement — no orphaned embedding rows to
   clean up separately.
 
+Both tables live in their own Postgres schema (`LAKEBASE_SCHEMA`, default
+`weather`), not `public`. This matters in practice: this is the second
+bootcamp homework in this workspace, and reusing the same Lakebase instance
+(and the same connection-string secret) from Day 1 is the natural thing to
+do rather than provisioning a second instance just to run a second app. A
+shared `public` schema would have worked today — nothing here happens to
+share a table name with Day 1's `watchlist_items`/`price_snapshots` — but
+that's luck, not a guarantee, and a shared namespace also makes it harder to
+tear one project's data out without touching the other's. `lakebase.py`
+creates the schema automatically and points every connection at it via `SET
+search_path` (not the libpq `options` parameter, which Lakebase's proxy
+silently drops), which is also why nothing in `app.py`, the ingestion
+notebook, or any of the three verification scripts needed to change to get
+this isolation — they all reference `weather_documents`/`weather_embeddings`
+unqualified already.
+
 ### `content_hash` + `embedded_at`
 
 Beyond what the reference ticker-news pipeline needed, `weather_documents`

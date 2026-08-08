@@ -9,6 +9,13 @@ env:
   - name: LAKEBASE_SECRET_KEY
     value: "lakebase-url"
 
+  # Schema this project's tables live in -- deliberately not "public", so
+  # they can never collide with (or need cleaning up alongside) another
+  # app's tables that happens to share the same Lakebase instance. Created
+  # automatically on first boot if missing.
+  - name: LAKEBASE_SCHEMA
+    value: "weather"
+
   # Alternative to the two above: bind the secret directly so the DSN
   # arrives as an environment variable and the app never calls the secrets
   # API. Needs the secret added as a resource on the app first (Edit ->

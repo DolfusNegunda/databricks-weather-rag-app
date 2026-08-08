@@ -9,6 +9,13 @@
 # MAGIC No API key is needed for the data source (the National Weather Service
 # MAGIC API is free and keyless), so this notebook only handles one secret.
 # MAGIC
+# MAGIC **Already have a Lakebase instance from another project?** Reuse its
+# MAGIC connection string here -- this app keeps its tables in their own schema
+# MAGIC (`weather`, not `public`), created automatically, so it cannot collide
+# MAGIC with another app's tables on the same instance. Pasting the same
+# MAGIC connection string you already have is safe; it just overwrites the
+# MAGIC secret with an identical value.
+# MAGIC
 # MAGIC ### Before you start
 # MAGIC
 # MAGIC Have your Lakebase connection string ready. It looks like:

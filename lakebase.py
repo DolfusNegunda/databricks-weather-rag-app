@@ -28,6 +28,7 @@ from __future__ import annotations
 import base64
 import logging
 import os
+import re
 import threading
 import time
 import uuid
@@ -47,6 +48,18 @@ _SQL_DIR = Path(__file__).resolve().parent / "sql"
 
 _SCOPE = os.environ.get("LAKEBASE_SECRET_SCOPE", "database")
 _KEY = os.environ.get("LAKEBASE_SECRET_KEY", "lakebase-url")
+
+# A schema of its own, not `public`, so this project's tables never collide
+# with -- and can be torn down independently of -- anything else sharing the
+# same Lakebase instance (e.g. another bootcamp homework's app). Interpolated
+# into SQL text below, so it is validated as a bare identifier rather than
+# trusted as-is.
+LAKEBASE_SCHEMA = (os.environ.get("LAKEBASE_SCHEMA") or "weather").strip()
+if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]{0,62}", LAKEBASE_SCHEMA):
+    raise ValueError(
+        f"LAKEBASE_SCHEMA={LAKEBASE_SCHEMA!r} is not a plain SQL identifier. "
+        "Use letters, digits and underscores only."
+    )
 
 _POOL_MIN = int(os.environ.get("LAKEBASE_POOL_MIN", "1"))
 _POOL_MAX = int(os.environ.get("LAKEBASE_POOL_MAX", "5"))
@@ -285,17 +298,33 @@ def dispose_pool() -> None:
 
 @contextmanager
 def get_connection():
-    """Yield a pooled psycopg2 connection with a RealDictCursor factory.
+    """Yield a pooled psycopg2 connection with a RealDictCursor factory,
+    already pointed at LAKEBASE_SCHEMA.
+
+    Every checkout runs `SET search_path` -- not once per physical connection,
+    every time -- because it is a single cheap round trip and it means every
+    caller of get_connection()/run_query()/run_write() can write plain
+    `weather_documents`/`weather_embeddings` and land in the right schema
+    without qualifying a single table name. This deliberately uses a SET
+    statement rather than a libpq `options=-c search_path=...` connect
+    parameter: Lakebase sits behind a connection proxy that reserves `options`
+    for its own endpoint routing and silently drops it, so a search_path set
+    that way never takes effect and every unqualified query then fails with
+    "relation does not exist" even though the table is right there.
 
     On any exception the connection is discarded rather than returned to the
     pool -- a connection that failed mid-transaction may be in an unknown
     state, and handing it to the next caller is how you get "connection
     already closed" errors that have nothing to do with what they asked for.
+    A discarded connection's SET is irrelevant; the next checkout is a fresh
+    connection that gets its own SET before anything else runs.
     """
     pool = _get_pool()
     conn = pool.getconn()
     broken = False
     try:
+        with conn.cursor() as cur:
+            cur.execute(f'SET search_path TO "{LAKEBASE_SCHEMA}", public')
         yield conn
     except Exception:
         broken = True
@@ -307,6 +336,22 @@ def get_connection():
             pool.putconn(conn, close=broken)
         except Exception:  # noqa: BLE001
             pass
+
+
+def _ensure_schema_exists(conn) -> None:  # noqa: ANN001
+    """CREATE SCHEMA IF NOT EXISTS, guarded by an existence check first.
+
+    IF NOT EXISTS is checked for the CREATE-on-database privilege *before* it
+    checks whether the schema already exists, so the bare form fails for a
+    role that cannot create schemas even when there is nothing to create.
+    Looking the name up first keeps the common case -- the schema already
+    exists, which is every call after the very first successful one -- free
+    of any dependency on that privilege.
+    """
+    with conn.cursor() as cur:
+        cur.execute("SELECT 1 FROM pg_namespace WHERE nspname = %s", (LAKEBASE_SCHEMA,))
+        if cur.fetchone() is None:
+            cur.execute(f'CREATE SCHEMA "{LAKEBASE_SCHEMA}"')
 
 
 def get_engine():
@@ -362,6 +407,7 @@ def ensure_weather_schema(embedding_dim: int = 384) -> dict:
     result = {"ok": False, "error": None}
     try:
         with get_connection() as conn:
+            _ensure_schema_exists(conn)
             with conn.cursor() as cur:
                 cur.execute(_render_sql("01_weather_documents.sql", embedding_dim))
                 cur.execute(_render_sql("02_weather_embeddings.sql", embedding_dim))
@@ -376,7 +422,13 @@ def ensure_weather_schema(embedding_dim: int = 384) -> dict:
 def target_summary() -> dict:
     """Where we are pointed and how we authenticate. Never a secret value."""
     dsn = _dsn()
-    summary = {"host": None, "database": None, "user": None, "auth": "unconfigured"}
+    summary = {
+        "host": None,
+        "database": None,
+        "schema": LAKEBASE_SCHEMA,
+        "user": None,
+        "auth": "unconfigured",
+    }
     if dsn:
         try:
             parts = _parse_dsn(dsn)
