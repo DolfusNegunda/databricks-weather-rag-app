@@ -776,6 +776,67 @@ check(
 
 
 # ----------------------------------------------------------------------------
+section("app.py: /api/locations")
+# ----------------------------------------------------------------------------
+
+resp = client.get("/api/locations")
+body = resp.get_json()
+check("locations endpoint responds 200", resp.status_code == 200, f"status={resp.status_code}")
+check(
+    "locations endpoint returns every known city",
+    isinstance(body.get("locations"), list) and set(body["locations"]) == set(weather_client_module.LOCATIONS),
+    f"body={body}",
+)
+check(
+    "locations endpoint returns a non-empty default list",
+    isinstance(body.get("default_locations"), list) and len(body["default_locations"]) > 0,
+    f"body={body}",
+)
+check(
+    "every default location is a real, known location",
+    set(body.get("default_locations", [])) <= set(weather_client_module.LOCATIONS),
+    f"defaults={body.get('default_locations')} known={list(weather_client_module.LOCATIONS)}",
+)
+
+
+# ----------------------------------------------------------------------------
+section("frontend: template/JS consistency")
+# ----------------------------------------------------------------------------
+
+# Regression guard for a real bug found in production: the location field used
+# to be free text, comma-parsed client-side into "City, ST" pairs. An odd
+# number of comma tokens left the last one dangling as its own bogus
+# location -- e.g. a lone "IL" sent as if it were a whole city -- which
+# resolve_location() then rejected with a confusing per-location error. The
+# fix replaced free text with a toggle-button grid built from
+# GET /api/locations, so a click can only ever produce one of the exact
+# strings the server already recognizes. There is no longer a parser to
+# regress, but the removed function's absence is asserted below so a future
+# change can't quietly reintroduce it.
+_js_source = (_PROJECT_ROOT / "static" / "js" / "app.js").read_text(encoding="utf-8")
+_html_source = (_PROJECT_ROOT / "templates" / "index.html").read_text(encoding="utf-8")
+
+check(
+    "the comma-parsing location function was not reintroduced",
+    "function parseLocations" not in _js_source,
+    "found parseLocations() in app.js -- see the docstring above for why "
+    "free-text comma parsing was replaced with a picker built from "
+    "GET /api/locations",
+)
+check("no innerHTML in the frontend", ".innerHTML" not in _js_source)
+check("no outerHTML in the frontend", ".outerHTML" not in _js_source)
+
+_referenced_ids = set(re.findall(r'getElementById\("([a-z0-9-]+)"\)', _js_source))
+check("app.js references at least one element id", len(_referenced_ids) > 0)
+_missing_ids = sorted(i for i in _referenced_ids if f'id="{i}"' not in _html_source)
+check(
+    "every element id app.js references exists in the template",
+    not _missing_ids,
+    f"missing: {_missing_ids}",
+)
+
+
+# ----------------------------------------------------------------------------
 # summary
 # ----------------------------------------------------------------------------
 

@@ -28,9 +28,24 @@
           <div class="pane__scroll">
             <form class="form" id="sync-form">
               <div class="field">
-                <label class="field__label" for="sync-locations">Locations</label>
-                <input type="text" id="sync-locations" placeholder="Chicago, IL, Austin, TX">
-                <p class="field__hint">Comma or pipe-separated. Leave blank to sync a default set of locations.</p>
+                <span class="field__label">Locations</span>
+                <input type="text" id="location-filter" autocomplete="off" spellcheck="false"
+                       placeholder="Type to filter, or just click a city below&hellip;">
+                <div class="citygrid" id="city-grid" role="group" aria-label="Locations to sync"></div>
+                <p class="field__hint" id="location-hint">
+                  Click a city to select it. Nothing selected syncs the default set
+                  (<span id="default-locations-list"></span>).
+                </p>
+
+                <details class="advanced">
+                  <summary>Advanced: sync a raw coordinate</summary>
+                  <div class="field-row">
+                    <input type="text" id="custom-lat" inputmode="decimal" placeholder="Latitude, e.g. 41.88">
+                    <input type="text" id="custom-lon" inputmode="decimal" placeholder="Longitude, e.g. -87.63">
+                  </div>
+                  <button type="button" class="btn btn--ghost btn--sm" id="custom-add">Add coordinate</button>
+                  <span class="field__error" id="custom-error" hidden></span>
+                </details>
               </div>
               <div class="form__actions">
                 <button type="submit" class="btn btn--primary" id="sync-submit">

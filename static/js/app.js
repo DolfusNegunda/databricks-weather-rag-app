@@ -3,7 +3,13 @@
 (function () {
   var els = {
     syncForm: document.getElementById("sync-form"),
-    syncLocations: document.getElementById("sync-locations"),
+    locationFilter: document.getElementById("location-filter"),
+    cityGrid: document.getElementById("city-grid"),
+    defaultLocationsList: document.getElementById("default-locations-list"),
+    customLat: document.getElementById("custom-lat"),
+    customLon: document.getElementById("custom-lon"),
+    customAdd: document.getElementById("custom-add"),
+    customError: document.getElementById("custom-error"),
     syncSubmit: document.getElementById("sync-submit"),
     syncSpinner: document.getElementById("sync-spinner"),
     syncSubmitLabel: document.getElementById("sync-submit-label"),
@@ -37,13 +43,140 @@
     discussion: "badge--seed",
   };
 
+  // ----------------------------------------------------- location picker --
+
+  var locationState = {
+    known: [],           // every city the server will recognize by name
+    defaults: [],         // what /weather/sync uses when nothing is selected
+    selected: [],          // known cities the user has clicked on
+    custom: [],            // "lat,lon" strings added via the Advanced panel
+  };
+
   init();
 
   function init() {
     els.syncForm.addEventListener("submit", onSyncSubmit);
+    els.locationFilter.addEventListener("input", function () {
+      renderCityGrid();
+    });
+    els.customAdd.addEventListener("click", onAddCustomCoordinate);
     els.searchForm.addEventListener("submit", onSearchSubmit);
     els.searchQuery.addEventListener("input", onQueryInput);
     updateSearchButtonEnabled();
+    loadLocations();
+  }
+
+  async function loadLocations() {
+    try {
+      var res = await fetch("/api/locations");
+      var data = await safeJson(res);
+      if (!res.ok || !data) {
+        throw new Error(errorMessageFrom(data, res));
+      }
+      locationState.known = Array.isArray(data.locations) ? data.locations : [];
+      locationState.defaults = Array.isArray(data.default_locations) ? data.default_locations : [];
+    } catch (err) {
+      // The city grid is a convenience over free text, not a hard
+      // dependency -- if the list can't be fetched, fall back to an empty
+      // grid (the server still accepts a blank sync, using its own default)
+      // rather than blocking the form on a failed GET.
+      locationState.known = [];
+      locationState.defaults = [];
+    }
+    els.defaultLocationsList.textContent = locationState.defaults.length
+      ? locationState.defaults.join(", ")
+      : "a preset few";
+    renderCityGrid();
+  }
+
+  function renderCityGrid() {
+    var filter = els.locationFilter.value.trim().toLowerCase();
+    var matches = locationState.known.filter(function (city) {
+      return !filter || city.toLowerCase().indexOf(filter) !== -1;
+    });
+
+    var buttons = matches.map(function (city) {
+      return buildCityButton(city, locationState.selected.indexOf(city) !== -1, false);
+    });
+
+    locationState.custom.forEach(function (coord) {
+      buttons.push(buildCityButton(coord, true, true));
+    });
+
+    if (!buttons.length) {
+      var empty = document.createElement("span");
+      empty.className = "citygrid__empty";
+      empty.textContent = locationState.known.length
+        ? "No city matches “" + els.locationFilter.value.trim() + "”."
+        : "Could not load the location list -- leave everything unselected to sync the defaults.";
+      els.cityGrid.replaceChildren(empty);
+      return;
+    }
+
+    els.cityGrid.replaceChildren(...buttons);
+  }
+
+  function buildCityButton(label, isSelected, isCustom) {
+    var button = document.createElement("button");
+    button.type = "button";
+    button.className = "city-btn" + (isSelected ? " is-selected" : "") + (isCustom ? " is-custom" : "");
+    button.setAttribute("aria-pressed", String(isSelected));
+
+    if (isSelected) {
+      var check = document.createElement("span");
+      check.className = "city-btn__check";
+      check.textContent = "✓";
+      button.appendChild(check);
+    }
+    button.appendChild(document.createTextNode(label));
+
+    button.addEventListener("click", function () {
+      if (isCustom) {
+        locationState.custom = locationState.custom.filter(function (c) { return c !== label; });
+      } else {
+        toggleSelected(label);
+      }
+      renderCityGrid();
+    });
+    return button;
+  }
+
+  function toggleSelected(city) {
+    var index = locationState.selected.indexOf(city);
+    if (index === -1) {
+      locationState.selected.push(city);
+    } else {
+      locationState.selected.splice(index, 1);
+    }
+  }
+
+  function onAddCustomCoordinate() {
+    els.customError.hidden = true;
+    var lat = parseFloat(els.customLat.value);
+    var lon = parseFloat(els.customLon.value);
+
+    if (!els.customLat.value.trim() || !els.customLon.value.trim() || isNaN(lat) || isNaN(lon)) {
+      els.customError.textContent = "Enter both a latitude and a longitude as numbers.";
+      els.customError.hidden = false;
+      return;
+    }
+    if (lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+      els.customError.textContent = "Latitude must be -90 to 90, longitude -180 to 180.";
+      els.customError.hidden = false;
+      return;
+    }
+
+    var coord = lat + "," + lon;
+    if (locationState.custom.indexOf(coord) === -1) {
+      locationState.custom.push(coord);
+    }
+    els.customLat.value = "";
+    els.customLon.value = "";
+    renderCityGrid();
+  }
+
+  function selectedLocations() {
+    return locationState.selected.concat(locationState.custom);
   }
 
   // ------------------------------------------------------------ helpers ----
@@ -77,47 +210,12 @@
     el.replaceChildren();
   }
 
-  // -------------------------------------------------------- sync locations --
-
-  // Each location is itself a comma-formatted "City, ST" pair matched
-  // verbatim against a lookup table server-side, so a literal split on every
-  // comma would shred "Chicago, IL" into "Chicago" and "IL" and neither
-  // would resolve. When the field has no "|", pair consecutive comma tokens
-  // back into two-part locations instead -- this reads "Chicago, IL, Austin,
-  // TX" (comma-only) the same way as "Chicago, IL|Austin, TX" (pipe) while
-  // still handling a bare "lat,lon" pair correctly either way.
-  function parseLocations(raw) {
-    var text = (raw || "").trim();
-    if (!text) {
-      return [];
-    }
-    if (text.indexOf("|") !== -1) {
-      return text
-        .split("|")
-        .map(function (s) { return s.trim(); })
-        .filter(Boolean);
-    }
-    var tokens = text
-      .split(",")
-      .map(function (s) { return s.trim(); })
-      .filter(Boolean);
-    var locations = [];
-    for (var i = 0; i < tokens.length; i += 2) {
-      if (i + 1 < tokens.length) {
-        locations.push(tokens[i] + ", " + tokens[i + 1]);
-      } else {
-        locations.push(tokens[i]);
-      }
-    }
-    return locations;
-  }
-
   // ------------------------------------------------------------------ sync --
 
   async function onSyncSubmit(event) {
     event.preventDefault();
 
-    var locations = parseLocations(els.syncLocations.value);
+    var locations = selectedLocations();
 
     setButtonLoading(els.syncSubmit, els.syncSpinner, els.syncSubmitLabel, true, "Sync weather data", "Syncing…");
     hideSyncStatus();

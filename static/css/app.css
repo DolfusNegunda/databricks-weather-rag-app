@@ -972,3 +972,67 @@ code {
   color: var(--tan-300);
   font-variant-numeric: tabular-nums;
 }
+
+/* ----------------------------------------------------- location picker ---- */
+/* A toggle-button grid, not a free-text comma-parsed field. The location list
+   is small, fixed and known in full up front (weather_client.LOCATIONS via
+   GET /api/locations) -- that makes it a pick-from-a-list problem, not a
+   parsing problem, and a toggle grid shows every option at once (no typing
+   required) while the filter input above it narrows the grid down for
+   anyone who'd rather type. This also removes the "odd number of comma
+   tokens leaves the last one dangling as its own bogus location" bug that
+   came with the free-text version -- a click can only ever produce one of
+   the exact strings the server already knows how to resolve. */
+.citygrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 4px;
+}
+
+.city-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--tan-300);
+  font-size: 12.5px;
+  font-weight: 550;
+  cursor: pointer;
+  transition: background 120ms var(--ease), border-color 120ms var(--ease), color 120ms var(--ease);
+}
+.city-btn:hover { border-color: var(--teal-600); color: var(--cream); }
+.city-btn.is-selected {
+  border-color: var(--teal-600);
+  background: color-mix(in srgb, var(--teal-600) 22%, var(--ink-750));
+  color: var(--cream);
+}
+.city-btn__check {
+  display: inline-flex;
+  color: var(--teal-400);
+  font-size: 11px;
+}
+.city-btn.is-custom { border-style: dashed; }
+
+.citygrid__empty {
+  font-size: 12.5px;
+  color: var(--tan-700);
+  padding: 4px 2px;
+}
+
+.advanced {
+  margin-top: 10px;
+}
+.advanced summary {
+  font-size: 12px;
+  color: var(--tan-500);
+  cursor: pointer;
+  user-select: none;
+}
+.advanced summary:hover { color: var(--cream); }
+.advanced[open] summary { color: var(--tan-300); margin-bottom: 8px; }
+.advanced .field-row { margin-top: 8px; margin-bottom: 8px; }

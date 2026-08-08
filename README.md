@@ -25,7 +25,7 @@ writeup (data source justification, schema decisions, limitations).
 | `notebooks/weather_sync_job.py` | Calls the deployed app's `POST /weather/sync` for the scheduled resync job below. |
 | `databricks.yml`, `resources/weather_sync_job.yml` | Databricks Asset Bundle for the stretch-goal scheduled job (`weather-alert-resync`, every 15 minutes) that re-syncs alerts against the already-deployed app. |
 | `setup_secrets.py` | Run once, as a Databricks notebook, to store your Lakebase connection string in a secret scope before deploying. |
-| `templates/`, `static/` | The "Weather Intelligence" single-page UI — sync form, search form, results pane. |
+| `templates/`, `static/` | The "Weather Intelligence" single-page UI — a click-to-select city grid (backed by `GET /api/locations`, no free-text location parsing), search form, results pane. |
 | `docs/scheduled_job.md` | How the scheduled resync job works and how to deploy/run it. |
 | `docs/crash-course/` | A runnable, six-part crash course on the concepts this pipeline uses — embeddings, chunking, pgvector, retrieval/RAG, and an HNSW benchmark. See `docs/crash-course/00-overview.md`. |
 | `scripts/` | Offline (`check_api.py`, `check_sql.py`) and live (`check_connection.py`) verification — see below. |
@@ -147,6 +147,7 @@ Databricks Asset Bundles — see `docs/scheduled_job.md` for
 | --- | --- | --- |
 | `GET` | `/` | Renders the Weather Intelligence single-page UI. |
 | `GET` | `/healthz` | Always returns 200; reports schema-bootstrap status and where Lakebase is pointed. |
+| `GET` | `/api/locations` | The known city list and the default set, for the UI's location picker. |
 | `POST` | `/weather/sync` | Harvests NWS alerts/forecasts/discussions for one or more locations and upserts them into `weather_documents`. |
 | `POST` | `/weather/search` | Embeds a query (JSON body) and returns the top-k most similar chunks by pgvector cosine similarity, optionally summarized. |
 | `GET` | `/weather/search` | The same search, via query string, for quick browser/`curl` use. |

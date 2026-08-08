@@ -304,9 +304,18 @@ type.
   other city name, however commonly recognized, fails with a `ValueError`
   naming the accepted forms rather than being resolved. This is a real
   coverage limit, stated plainly rather than implied to be broader.
+  The UI's Sync panel used to expose this as a free-text field, comma-parsed
+  client-side into `"City, ST"` pairs — real production bug found from a
+  screenshot: an odd number of comma tokens left the last one dangling as
+  its own bogus location (a lone `"IL"` sent as if it were a whole city,
+  rejected with a confusing per-location error). Replaced with a
+  click-to-select grid built from `GET /api/locations`, so a click can only
+  ever produce an exact string the server already knows how to resolve —
+  the parsing step, and the bug class that came with it, no longer exists.
+  `scripts/check_api.py` asserts the removed parser function stays removed.
 - **No live run against a real Lakebase instance has happened yet.** All
   three verification scripts exist and the two offline ones are green
-  (`scripts/check_api.py`: 76 checks; `scripts/check_sql.py`: 14 checks,
+  (`scripts/check_api.py`: 85 checks; `scripts/check_sql.py`: 14 checks,
   covering both `.sql` files, the exact SQL constants read out of `app.py`
   and the ingestion notebook by AST rather than retyped, and the
   `execute_values` template after simulating its row substitution) — but

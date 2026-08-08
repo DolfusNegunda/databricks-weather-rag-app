@@ -114,6 +114,30 @@ def index():
     return render_template("index.html")
 
 
+@app.route("/api/locations", methods=["GET"])
+def list_locations():
+    """The known city list, for the UI's location picker.
+
+    Exists so the frontend never hardcodes a second copy of
+    weather_client.LOCATIONS that could drift out of sync with the one
+    resolve_location() actually checks against -- there is exactly one
+    source of truth for "what location strings actually work," and this
+    just exposes it as JSON.
+    """
+    return jsonify(
+        {
+            "locations": list(weather_client.LOCATIONS.keys()),
+            "default_locations": [
+                loc.strip()
+                for loc in os.environ.get(
+                    "WEATHER_DEFAULT_LOCATIONS", "Chicago, IL|Austin, TX|Miami, FL"
+                ).split("|")
+                if loc.strip()
+            ],
+        }
+    )
+
+
 # --------------------------------------------------------------------------
 # persistence
 # --------------------------------------------------------------------------
