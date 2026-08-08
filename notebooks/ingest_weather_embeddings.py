@@ -33,6 +33,48 @@
 # COMMAND ----------
 
 # MAGIC %md
+# MAGIC ## Step 0: install dependencies
+# MAGIC
+# MAGIC A notebook's attached cluster does **not** automatically have this repo's
+# MAGIC `requirements.txt` installed -- that only happens automatically for the
+# MAGIC already-deployed Databricks App's own container, which is a completely
+# MAGIC separate environment from a notebook's cluster. Without this cell, the
+# MAGIC very next `import lakebase` below fails with `ModuleNotFoundError:
+# MAGIC No module named 'sqlalchemy'` (or `psycopg2`, or `sentence_transformers`,
+# MAGIC depending on what the cluster's base image happens to already have).
+# MAGIC
+# MAGIC The relative path below (`../requirements.txt`) resolves against this
+# MAGIC notebook's own location inside the Git folder / Repo -- that resolution
+# MAGIC is a Databricks Repos feature and needs this notebook to actually be
+# MAGIC inside one (which it is, per this project's own deploy instructions). If
+# MAGIC this cell errors that it cannot find the file, install the same packages
+# MAGIC directly instead:
+# MAGIC ```
+# MAGIC %pip install sqlalchemy psycopg2-binary sentence-transformers numpy databricks-sdk torch --extra-index-url https://download.pytorch.org/whl/cpu
+# MAGIC ```
+# MAGIC Skipped automatically when this file runs as a plain script
+# MAGIC (`python notebooks/ingest_weather_embeddings.py`), since `%pip` is a
+# MAGIC notebook-only magic command -- that path is expected to already be
+# MAGIC running inside a venv where `pip install -r requirements.txt` was run
+# MAGIC ahead of time (see this repo's README).
+
+# COMMAND ----------
+
+# MAGIC %pip install -r ../requirements.txt
+
+# COMMAND ----------
+
+# Restart so the packages just installed are actually importable -- %pip
+# install alone does not refresh an already-running Python process's loaded
+# modules. Guarded the same way every other dbutils use in this file is:
+# running as a plain script has no dbutils at all, and needs no restart since
+# its venv already has everything installed.
+if "dbutils" in globals():
+    dbutils.library.restartPython()  # noqa: F821 -- only defined inside an actual notebook run
+
+# COMMAND ----------
+
+# MAGIC %md
 # MAGIC ## Config
 # MAGIC
 # MAGIC Same env var names and defaults as `embedder.py` uses for

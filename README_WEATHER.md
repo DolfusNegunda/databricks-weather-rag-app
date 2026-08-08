@@ -191,7 +191,13 @@ type.
    - **As an actual Databricks notebook**: open
      `notebooks/ingest_weather_embeddings.py` in the workspace Git folder
      and run all cells. Same code, same output, `dbutils` widgets standing
-     in for the `os.environ` defaults used standalone.
+     in for the `os.environ` defaults used standalone. The notebook's first
+     real cell runs `%pip install -r ../requirements.txt` and restarts
+     Python — a notebook's attached cluster does **not** automatically have
+     this repo's dependencies installed (that only happens automatically for
+     the deployed App's own container, a separate environment entirely), so
+     without that cell the next cell's `import lakebase` fails with
+     `ModuleNotFoundError: No module named 'sqlalchemy'`.
 
    Either way it prints the number of documents needing embedding, chunks
    produced, and rows written to `weather_embeddings`.
